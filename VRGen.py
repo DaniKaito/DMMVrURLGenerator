@@ -54,7 +54,7 @@ def writeVrUrls(urls):
 
 def main():
     with sync_playwright() as playwright:
-        firefox = playwright.chromium.launch(headless=False)
+        firefox = playwright.chromium.launch(headless=True)
         page = firefox.new_page()
         login(page)
         vrIds = getIds()
