@@ -3,9 +3,8 @@ from time import sleep
 import os
 
 javIdListFile = ".\\ids.txt"
-email = "EMAIL"
-password = "PASSWORD"
-urlConfirmAccount = "https://www.dmm.co.jp/monthly/vr/-/detail/=/cid=1nhvr00036/"
+email = ""
+password = ""
 outTxtFile = ".\\vrUrls.txt"
 
 if not os.path.exists(outTxtFile):
@@ -18,9 +17,6 @@ def getIds():
 
 def login(page):
     print("LOGGING IN DMM")
-    page.goto("https://www.dmm.co.jp/")
-    page.locator('xpath=//*[@id="dm-content"]/main/div/div/div[2]/a').click()
-    print("PASSED +18 CHECK")
     page.goto("https://accounts.dmm.co.jp/service/login/password")
     page.locator('xpath=//*[@id="login_id"]').click()
     page.keyboard.type(email, delay=70)
@@ -30,19 +26,11 @@ def login(page):
     page.keyboard.type(password, delay=80)
     print("PASSWORD INSERTED")
     sleep(3)
-    page.locator('xpath=//*[@id="__next"]/div[2]/div[1]/div/div/div[1]/div/dl[1]/dd/div/form/div[1]/label').click()
-    sleep(0.3)
-    page.locator('xpath=//*[@id="__next"]/div[2]/div[1]/div/div/div[1]/div/dl[1]/dd/div/form/div[2]/label').click()
-    sleep(0.3)
-    page.locator('xpath=//*[@id="loginbutton_script_on"]/label').click()
+    page.locator('css=#use_auto_login').click()
     sleep(0.3)
     print("CHECKBOX CHECKED")
-    page.locator('xpath=//*[@id="loginbutton_script_on"]/span/input').click()
+    page.locator('xpath=/html/body/div[1]/div/div[2]/div/div[2]/main/div/div/div/div/div/div/div/div[2]/form/button').click()
     print("DONE LOGGING IN")
-    sleep(3)
-    page.goto(urlConfirmAccount)
-    page.locator('xpath=//*[@id="main-digital"]/div/div/div/div/dl/dd/form/div[2]/span/input').click()
-    print("ACCOUNT CONFIRMED")
     sleep(3)
 
 def writeVrUrls(urls):
@@ -55,7 +43,9 @@ def writeVrUrls(urls):
 def main():
     with sync_playwright() as playwright:
         firefox = playwright.chromium.launch(headless=True)
-        page = firefox.new_page()
+        context = firefox.new_context()
+        context.add_cookies([{"name": "age_check_done", "value":"1", "url":"https://www.dmm.co.jp"}])
+        page = context.new_page()
         login(page)
         vrIds = getIds()
         print(f"Found a total of {len(vrIds)} vr videos in the txt file")
@@ -65,6 +55,14 @@ def main():
             print(f"\nNow analyzing the following url: {url} --- id={id}")
             page.goto(url, timeout=0)
             sleep(2)
+            bitrateSelector = page.locator('css=#download_bitrate')
+            bitrateSelector.click()
+            sleep(1)
+            optionNum = len(bitrateSelector.locator('css=option').all())
+            for i in range(optionNum):
+                page.keyboard.press("ArrowDown")
+                sleep(0.2)
+            page.keyboard.press("Enter")
             for qualityList in page.locator('css=#download_panel ul').all():
                 if qualityList.is_visible():
                     for a in qualityList.locator('css=a').all():
@@ -77,8 +75,6 @@ def main():
                             download.cancel()
             print(f"Found a total of {len(vrUrls)} parts")
             writeVrUrls(vrUrls)
-
-
 
 if __name__ == "__main__":
     main()
